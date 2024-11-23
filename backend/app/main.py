@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.utils.database import get_db, engine
-from app.routes import agents_router, tasks_router
+from app.routes import agents_router, tasks_router, agents
 from app.models.base import Base
 from app.models.agent import Agent, Task, Conversation  # Import models to register them
 import logging
@@ -45,6 +45,8 @@ app.include_router(
     tags=["tasks"],
     responses={404: {"description": "Not found"}},
 )
+
+app.include_router(agents.router, prefix="/api/v1/agents")
 
 @app.on_event("startup")
 async def startup_event():

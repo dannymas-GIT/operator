@@ -1,68 +1,66 @@
-from typing import Dict, Any
-from app.models.agent import Agent
-from openai import AsyncOpenAI
-from app.config.settings import settings
-import logging
-import json
+from typing import Dict, Any, Optional
 import aiohttp
 from bs4 import BeautifulSoup
-
-logger = logging.getLogger(__name__)
+from app.config.settings import settings
+from openai import AsyncOpenAI
+import json
 
 class DataExtractionAgent:
-    def __init__(self, agent: Agent):
+    def __init__(self):
         if not settings.OPENAI_API_KEY:
-            raise ValueError("OpenAI API key not found in environment")
-            
+            raise ValueError("OpenAI API key not found")
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.agent = agent
         self.model = "gpt-4-1106-preview"
-        
-    async def fetch_url_content(self, url: str) -> str:
-        """Fetch content from URL"""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    html = await response.text()
-                    soup = BeautifulSoup(html, 'html.parser')
-                    # Remove script and style elements
-                    for script in soup(["script", "style"]):
-                        script.decompose()
-                    text = soup.get_text()
-                    # Clean up whitespace
-                    lines = (line.strip() for line in text.splitlines())
-                    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                    text = ' '.join(chunk for chunk in chunks if chunk)
-                    return text
-        except Exception as e:
-            logger.error(f"Error fetching URL {url}: {str(e)}")
-            raise Exception(f"Error fetching URL: {str(e)}")
-        
-    async def process_task(self, task_input: str) -> str:
+
+    async def fetch_url_content(self, url: str) -> Dict[str, Any]:
+        """Fetch content from URL and return both HTML and text versions"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise Exception(f"Error code: {response.status}")
+                html = await response.text()
+                soup = BeautifulSoup(html, 'html.parser')
+                
+                # Remove script and style elements
+                for script in soup(["script", "style"]):
+                    script.decompose()
+
+                return {
+                    "html": html,
+                    "text": soup.get_text(separator='\n', strip=True)
+                }
+
+    async def process_task(self, url: str) -> Dict[str, Any]:
         """Process a data extraction task"""
         try:
-            # Extract content if URL provided
-            content = task_input
-            if task_input.startswith(("http://", "https://")):
-                logger.info(f"Fetching content from URL: {task_input}")
-                content = await self.fetch_url_content(task_input)
-                content = f"Content extracted from URL {task_input}:\n\n{content}"
+            # Fetch content
+            content = await self.fetch_url_content(url)
             
+            # Prepare system prompt
             system_prompt = """You are a Data Extraction Agent specialized in:
             1. Web scraping and data collection
             2. Information compilation from multiple sources
             3. Data cleaning and structuring
             4. Pattern recognition in unstructured data
             
-            When given content:
-            1. Identify key data points
-            2. Extract relevant information
-            3. Return data in a structured JSON format with:
-               - main_content: The primary content or summary
-               - metadata: Any relevant metadata (dates, authors, etc.)
-               - structured_data: Key information as key-value pairs
+            Extract key information from the content and return a JSON object with the following structure:
+            {
+                "main_content": "The main textual content",
+                "metadata": {
+                    "title": "Page title",
+                    "author": "Author if available",
+                    "date": "Publication date if available",
+                    "url": "Source URL"
+                },
+                "structured_data": {
+                    "key_points": ["array of key points"],
+                    "categories": ["array of categories"],
+                    "related_topics": ["array of related topics"]
+                }
+            }
             """
             
+            # Get AI response
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -72,16 +70,20 @@ class DataExtractionAgent:
                     },
                     {
                         "role": "user",
-                        "content": content
+                        "content": f"Please analyze this content and return a JSON response: {content['text']}"
                     }
                 ],
                 temperature=0.3,
                 response_format={ "type": "json_object" }
             )
+
+            # Parse AI response
+            result = json.loads(response.choices[0].message.content)
             
-            result = response.choices[0].message.content
+            # Add original HTML if needed
+            result["html_content"] = content["html"]
+            
             return result
-            
+
         except Exception as e:
-            logger.error(f"Data extraction error: {str(e)}")
-            raise Exception(f"Data extraction error: {str(e)}") 
+            raise Exception(f"Error processing URL {url}: {str(e)}") 

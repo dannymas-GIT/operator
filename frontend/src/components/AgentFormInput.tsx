@@ -11,6 +11,18 @@ interface AgentFormInputProps {
 export const AgentFormInput: React.FC<AgentFormInputProps> = ({ input, value, onChange }) => {
   const renderInput = () => {
     switch (input.type) {
+      case 'checkbox':
+        return (
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              className="form-checkbox h-4 w-4 text-blue-600"
+              checked={value === 'true'}
+              onChange={(e) => onChange(input.id, e.target.checked.toString())}
+            />
+            <span className="text-sm text-gray-700">{input.label2}</span>
+          </label>
+        );
       case 'textarea':
         return (
           <textarea
@@ -50,7 +62,9 @@ export const AgentFormInput: React.FC<AgentFormInputProps> = ({ input, value, on
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium">{input.label}</label>
+        {input.type !== 'checkbox' && (
+          <label className="block text-sm font-medium">{input.label}</label>
+        )}
         <HelpDialog input={input} />
       </div>
       {renderInput()}

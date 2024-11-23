@@ -33,8 +33,46 @@ export const agents: AgentConfig = {
           ]
         }
       },
-      { id: 'dataPoints', label: 'Data Points to Extract', type: 'text', placeholder: 'e.g., prices, titles, descriptions' },
-      { id: 'format', label: 'Output Format', type: 'select', options: ['CSV', 'JSON', 'Excel'] }
+      {
+        id: 'dataPoints',
+        label: 'Data Points to Extract',
+        type: 'text',
+        placeholder: 'e.g., prices, titles, descriptions',
+        help: {
+          title: 'Data Points',
+          description: 'Specify what data you want to extract. Separate multiple items with commas.',
+          examples: [
+            'title, price, description',
+            'author, date, content'
+          ]
+        }
+      },
+      {
+        id: 'format',
+        label: 'Output Format',
+        type: 'select',
+        options: ['HTML', 'JSON', 'CSV', 'Excel'],
+        help: {
+          title: 'Output Format',
+          description: 'Choose how you want the extracted data to be formatted.',
+          examples: [
+            'HTML - Preserves original formatting',
+            'JSON - Structured data format',
+            'CSV - Spreadsheet compatible',
+            'Excel - Microsoft Excel format'
+          ]
+        }
+      },
+      {
+        id: 'preserveHtml',
+        label: 'Preserve HTML',
+        type: 'checkbox',
+        label2: 'Keep original HTML formatting',
+        help: {
+          title: 'HTML Preservation',
+          description: 'When enabled, keeps the original HTML formatting of the extracted content.'
+        }
+      }
     ]
   },
   'form-filling': {

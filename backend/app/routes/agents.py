@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Dict
+from typing import List, Dict, Optional
 from app.utils.database import get_db
 from app.models.agent import Agent, Task, Conversation, AgentType, AgentStatus
 from app.services.agents.agent_factory import AgentFactory
 from pydantic import BaseModel
 from datetime import datetime
 import logging
+from app.services.agents.data_extraction_agent import DataExtractionAgent
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +40,12 @@ class AgentResponse(BaseModel):
 class AgentAction(BaseModel):
     action: str
     parameters: dict = {}
+
+class DataExtractionRequest(BaseModel):
+    urls: List[str]
+    data_points: Optional[List[str]] = None
+    output_format: Optional[str] = "json"
+    preserve_html: Optional[bool] = False
 
 @router.post("/agents/", response_model=AgentResponse, status_code=status.HTTP_201_CREATED)
 async def create_agent(agent: AgentCreate, db: Session = Depends(get_db)):
@@ -156,3 +163,33 @@ async def get_agent_tasks(agent_id: int, db: Session = Depends(get_db)):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent.tasks 
+
+@router.post("/data-extraction/process")
+async def process_data_extraction(request: DataExtractionRequest):
+    try:
+        agent = DataExtractionAgent()
+        
+        # Process each URL
+        results = []
+        for url in request.urls:
+            result = await agent.process_task(url)
+            results.append(result)
+
+        # Format response based on output format
+        response = {
+            "main_content": "\n\n".join([r.get("main_content", "") for r in results]),
+            "metadata": {
+                "urls": request.urls,
+                "data_points": request.data_points,
+                "timestamp": datetime.now().isoformat()
+            },
+            "structured_data": results
+        }
+
+        if request.preserve_html:
+            response["html_content"] = "\n".join([r.get("html_content", "") for r in results])
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

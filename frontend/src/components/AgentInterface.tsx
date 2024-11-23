@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AgentFormInput } from './AgentFormInput';
 import { agents } from '../config/agents';
 import { AgentStatus } from '../types/agent';
+import { AgentResponse } from './AgentResponse';
 
 interface FormData {
   [key: string]: string;
@@ -20,6 +21,7 @@ const AgentInterface: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({});
   const [status, setStatus] = useState<AgentStatus>('idle');
+  const [responseData, setResponseData] = useState<any>(null);
 
   const currentAgent = agentType ? agents[agentType] : null;
 
@@ -53,10 +55,44 @@ const AgentInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('running');
-    // Simulate agent running
-    setTimeout(() => {
+    
+    try {
+      // Prepare the request payload based on agent type
+      let payload;
+      if (agentType === 'data-extraction') {
+        payload = {
+          urls: formData.websites?.split('\n').filter(url => url.trim()),
+          data_points: formData.dataPoints?.split(',').map(point => point.trim()),
+          output_format: formData.format?.toLowerCase(),
+          preserve_html: formData.preserveHtml === 'true'
+        };
+      } else {
+        payload = formData;
+      }
+
+      console.log('Sending request with payload:', payload); // Debug log
+
+      const response = await fetch(`http://localhost:8000/api/v1/agents/${agentType}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || 'Failed to process request');
+      }
+
+      const result = await response.json();
+      console.log('Received response:', result); // Debug log
+      setResponseData(result);
       setStatus('complete');
-    }, 3000);
+    } catch (error) {
+      console.error('Error processing request:', error);
+      setStatus('error');
+    }
   };
 
   const renderIntroduction = () => (
@@ -95,32 +131,15 @@ const AgentInterface: React.FC = () => {
     );
   };
 
-  const renderStatus = () => (
-    <div className="space-y-4">
-      {status === 'running' ? (
-        <Alert>
-          <Loader className="w-4 h-4 animate-spin" />
-          <AlertDescription>Agent is processing your request...</AlertDescription>
-        </Alert>
-      ) : status === 'complete' ? (
-        <Alert>
-          <CheckCircle className="w-4 h-4 text-green-500" />
-          <AlertDescription>Task completed successfully!</AlertDescription>
-        </Alert>
-      ) : status === 'error' ? (
-        <Alert>
-          <AlertCircle className="w-4 h-4 text-red-500" />
-          <AlertDescription>An error occurred. Please try again.</AlertDescription>
-        </Alert>
-      ) : null}
-    </div>
-  );
-
   return (
     <div className="max-w-4xl mx-auto p-6">
       {renderIntroduction()}
       {renderAgentForm()}
-      {status !== 'idle' && renderStatus()}
+      <AgentResponse 
+        status={status}
+        data={responseData}
+        error={status === 'error' ? 'Failed to process request' : undefined}
+      />
     </div>
   );
 };
