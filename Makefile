@@ -1,17 +1,21 @@
+.PHONY: setup dev build clean
 
-.PHONY: setup dev test deploy
-
+# Initial setup
 setup:
-    docker-compose build
-    docker-compose run --rm frontend npm install
-    docker-compose run --rm backend pip install -r requirements.txt
+	docker compose build
+	docker compose run --rm frontend npm install
+	docker compose run --rm backend pip install -r requirements.txt
 
+# Start development environment
 dev:
-    docker-compose up
+	docker compose up
 
-test:
-    docker-compose run --rm frontend npm test
-    docker-compose run --rm backend pytest
+# Clean everything and rebuild
+clean:
+	docker compose down -v
+	docker system prune -f
+	docker volume prune -f
 
-deploy:
-    ./scripts/deploy.sh
+# Build production images
+build:
+	docker compose -f docker-compose.prod.yml build
