@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import FormFillerAgent from './FormFillerAgent'
 
 interface ExtractedData {
   main_content: string;
@@ -257,6 +258,13 @@ const DataExtractionAgent: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {result && (
+        <FormFillerAgent 
+          extractedData={result} 
+          agentId={agentId} 
+        />
       )}
     </div>
   )

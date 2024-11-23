@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import logging
+from .form_filler_agent import FormFillerAgent
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,6 @@ class AgentService:
             logger.info(f"Processing action for agent {agent_id}")
             logger.info(f"Action data: {action_data}")
             
-            # Validate action data
             if 'action' not in action_data or 'parameters' not in action_data:
                 raise ValueError("Missing required action fields")
                 
@@ -30,7 +30,6 @@ class AgentService:
                 logger.info(f"Processing URL: {url}")
                 
                 # Your URL processing logic here
-                # For now, return a test response
                 return {
                     "main_content": f"Processed content from {url}",
                     "metadata": {
@@ -44,6 +43,15 @@ class AgentService:
                         "abstract": "Test abstract"
                     }]
                 }
+            elif action == 'fill_form':
+                if 'extracted_data' not in parameters or 'form_schema' not in parameters:
+                    raise ValueError("Missing form parameters")
+                
+                form_filler = FormFillerAgent()
+                return await form_filler.process_form(
+                    parameters['extracted_data'],
+                    parameters['form_schema']
+                )
             else:
                 raise ValueError(f"Unknown action: {action}")
                 

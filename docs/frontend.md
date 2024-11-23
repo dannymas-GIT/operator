@@ -277,3 +277,35 @@ const KeyboardNavigation = () => {
 - Performance metrics
 - Usage statistics
 - Security incidents
+
+## Agent Interface
+
+The agent interface system consists of several key components:
+
+### Components
+- `AgentInterface`: Main component that handles agent-specific forms and interactions
+- `AgentFormInput`: Reusable form input component with help functionality
+- `HelpDialog`: Context-sensitive help system for form inputs
+- `Navigation`: Left sidebar navigation with agent selection
+
+### Features
+- Dynamic form generation based on agent type
+- Context-sensitive help for each input field
+- Agent-specific introductions and guidance
+- Real-time form validation
+- Status indicators for agent operations
+
+### Agent Types
+- Data Extraction
+- Form Filling
+- Booking Assistant
+- Social Media Manager
+- Research Assistant
+- E-commerce Optimization
+
+### Usage
+Each agent type is configured in `config/agents.ts` with:
+- Icon and title
+- Description
+- Introduction text
+- Form inputs with help information
